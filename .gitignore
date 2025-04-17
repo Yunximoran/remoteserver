@@ -1,0 +1,8 @@
+*/__pycache__
+*.pyc
+logs/
+!local/instructs
+!local/packs
+local/instructs/*
+local/packs/*
+.conda

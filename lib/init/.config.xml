@@ -1,0 +1,33 @@
+<root>
+	<database>
+		<redis>
+			<host>localhost</host>
+			<port>6379</port>
+			<db>0</db>
+		</redis>
+		<mysql user="root" password="ranxi">
+			<host>localhost</host>
+			<port>3306</port>
+			<db>test</db>
+		</mysql>
+	</database>
+	<preformance>
+		<min-processes>5</min-processes>
+		<max-processes>10</max-processes>
+		<tcp-listenes>5</tcp-listenes>
+	</preformance>
+	<default>
+		<log-settings>
+			<level>info</level>
+			<logs struct="模块日志文件" status="hidden">
+				<dir name="db">
+					<li>redis.log</li>
+					<li>mysql.log</li>
+				</dir>
+				<li>process.log</li>
+				<li>socket.log</li>
+			</logs>
+		</log-settings>
+		<encoding>utf-8</encoding>
+	</default>
+</root>
