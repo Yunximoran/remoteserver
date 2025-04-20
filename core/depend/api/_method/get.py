@@ -2,7 +2,7 @@ from fastapi import Query
 from typing import Annotated
 from lib.strtool import pattern
 from static import DB
-
+from pathlib import Path
 
 def parse_heartpkgs() -> dict:   # 解析心跳包数据
     heart_packages = DB.loads(DB.hgetall("heart_packages"))
@@ -29,6 +29,14 @@ def get_working(ip=None):   # 获取工作目录
     else:
         return {ip: heartpkgs[ip]['working'] for ip in heartpkgs}
  
+
+def get_os(ip=None):
+    heartpkgs= parse_heartpkgs()
+    if ip:
+        return heartpkgs[ip]['os']
+    else:
+        return {ip: heartpkgs[ip]['os'] for ip in heartpkgs}
+    
 def get_soft_information(   # 获取软件信息
     cln: Annotated[str, "分类名称"], 
     softname: Annotated[str, "软件名称"],
@@ -67,20 +75,27 @@ def get_classify(): # 获取分类数据
 
     for cln in classify:
         items:list[dict] = classify[cln]
-        index=0
+
         for item in items:
-            if item['soft'] == "":
-                items.pop(index)
-                continue
-            else:
-                index += 1
-                
+
             soft = item["soft"]
             ip = item["ip"]
             item['mac'], item['status'], item['conning'] = get_soft_information(cln, soft, ip)
+            item['os'] = get_os(ip)
             item['working'] = get_working(ip)
             item['files'] = get_files(ip)
-    return items
+    return classify
+
+def get_client_files(filedir:Path):
+    files = {file.name: {} for file in filedir.rglob("*") if file.is_file()}
+    fileclient = get_files() # {ip: {file: 11%}}
+    for ip in fileclient:
+        ipfiles = fileclient[ip]
+        for file in ipfiles:
+            if file in files:
+                files[file][ip]=ipfiles[file]
+    return files
+
 
 
 

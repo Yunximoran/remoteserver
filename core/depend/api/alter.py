@@ -21,8 +21,8 @@ async def setalias(alias, ip:Annotated[str, Query(pattern=pattern.NET_IP)]):
 
 @router.put('/reset_classify_name')
 async def reset_classify_name(
-        oldn: Annotated[str, None],
-        newn: Annotated[str, None]
+        oldn: str,
+        newn: str
     ):
     if oldn not in DB.smembers("classifylist"):
         return {"ERROR": f"{oldn} is not exist"}

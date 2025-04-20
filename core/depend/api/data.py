@@ -14,9 +14,11 @@ from lib.sys.system import OS
 from ._method.get import (
     get_classify,
     get_netspeed,
-    get_client_information
+    get_client_information,
+    get_client_files
 )
 resolver = Resolver()
+filepath = resolver("path", "local")
 
 # 数据接口
 router = APIRouter()
@@ -79,7 +81,8 @@ async def get_realtime_data():
         "classify": get_classify(),             # 分类数据
         "classifylist": DB.smembers("classifylist"),    # 分类索引
         "netspeed": get_netspeed(),
-        "client_information": get_client_information()
+        "client_information": get_client_information(),
+        "files": get_client_files(filepath.path)
     }
     
     

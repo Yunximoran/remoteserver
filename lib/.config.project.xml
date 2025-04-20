@@ -19,7 +19,7 @@
 	</server>
 	<sock describe="通信配置">
 		<udp describe="配置组播组和广播域">
-			<ip-broad>192.168.31.255</ip-broad>
+			<ip-broad>192.168.255.255</ip-broad>
 			<ip-multi>224.25.25.1</ip-multi>
 		</udp>
 		<tcp describe="配置TCP性能参数">
@@ -42,8 +42,8 @@
 		</tcp>
 	</ports>
 	<network describe="局域网IP和MAC">
-		<ip>192.168.31.176</ip>
-		<mac>20-1E-88-F5-05-B9</mac>
+		<ip>192.168.8.243</ip>
+		<mac>6C-3C-8C-1B-BC-7F</mac>
 	</network>
 	<path>
 		<local struct="服务端资源目录">
