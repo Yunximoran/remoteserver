@@ -86,14 +86,26 @@ def get_classify(): # 获取分类数据
             item['files'] = get_files(ip)
     return classify
 
+
+def get_filestatus(filename, ip, status):
+    statuslist =  DB.loads(DB.hget(filename, ip))
+    if statuslist:
+        return status in  statuslist
+    else:
+        return False
+
 def get_client_files(filedir:Path):
     files = {file.name: {} for file in filedir.rglob("*") if file.is_file()}
-    fileclient = get_files() # {ip: {file: 11%}}
+    fileclient = get_files()
     for ip in fileclient:
         ipfiles = fileclient[ip]
         for file in ipfiles:
             if file in files:
-                files[file][ip]=ipfiles[file]
+                files[file][ip]= {
+                    "working": get_working(ip),
+                    "schedule": get_files(ip)[file],
+                    "compressed": get_filestatus(file, ip, "compressed")
+                }
     return files
 
 

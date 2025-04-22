@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 from datamodel.transfer_data import SoftwareList
 from static import DB
-
+import json
 
 router = APIRouter()
 prefix = "/set"
@@ -25,3 +25,7 @@ async def addsoftwarelist(softwares: Annotated[SoftwareList, None]):
         softs.append(info.ecdis.name)
         DB.hset("softwarelist", info.ecdis.name, info.model_dump_json())
     return {"OK": softs}
+
+@router.put("/set_filestatus")
+async def set_filestatus(filename, ip, status:list):
+    DB.hset(filename, ip, json.dumps(status, ensure_ascii=False, indent=4))

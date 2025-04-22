@@ -40,4 +40,3 @@ async def reset_classify_name(
         DB.hset("classify", newn, items)
     return {"OK": f"set {oldn} -> {newn}"}
     
-    

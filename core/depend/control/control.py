@@ -68,28 +68,32 @@ class Control:
     def _send_tasks(self, toclients, instructs=None, files=None, wol=False):
         connings, breaks = toclients
         with Pool() as pool:
+            if wol:
+                # 发送唤醒魔术包
+                tasks = pool.map_async(self.sendtowol, breaks).wait()
+
+            if files is not None:
+                # 发送文件数据
+                sendto = partial(self.sendtofile, files=files)
+                tasks = pool.map_async(sendto, connings, 
+                               attribute={  # 使用偏函数后对丢失某些属性，通过attribute参数手动设置
+                                   "__name__": self.sendtofile.__name__
+                                   }
+                               )
+                tasks.get()
+
             if instructs is not None:
                 # 发送指令数据
                 logger.record(1, f"{instructs}")
                 sendto = partial(self.sendtoshell, instructs=instructs)
-                pool.map_async(sendto, connings, 
+                tasks = pool.map_async(sendto, connings, 
                                attribute={  # 使用偏函数后对丢失某些属性，通过attribute参数手动设置
                                    "__name__": self.sendtoclient.__name__
                                    }
-                               ).get()
+                               )
+                tasks.get()
                 
-            if files is not None:
-                # 发送文件数据
-                sendto = partial(self.sendtofile, files=files)
-                pool.map_async(sendto, connings, 
-                               attribute={  # 使用偏函数后对丢失某些属性，通过attribute参数手动设置
-                                   "__name__": self.sendtofile.__name__
-                                   }
-                               ).get()
-                
-            if wol:
-                # 发送唤醒魔术包
-                pool.map_async(self.sendtowol, breaks).get()
+            
  
     @staticmethod                           
     def sendtofile(ip, files:list[Path]): # 发送文件数据

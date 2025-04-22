@@ -27,11 +27,11 @@ tags = ["send"]
 
 
 @router.post("/download")   # 下载文件
-async def sendfiles(files:List[AnyStr], toclients: List[AnyStr] = []):
+async def sendfiles(files:List[AnyStr], toclients: List[AnyStr] = [], instructlist:InstructList = None):
     try:
         files = [Path(file) for file in files]
-        # return files
-        controlor.sendtoclient(toclients=toclients, files=files)
+        instructs = None if instructlist is None else [item.model_dump_json() for item in instructlist.items]
+        controlor.sendtoclient(toclients=toclients, files=files, instructs=instructs)
     except Exception as e:
         return {"ERROR": str(e)}
     
