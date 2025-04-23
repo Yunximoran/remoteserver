@@ -36,11 +36,3 @@ class SoftwareList(BaseModel):
 class SendSoftWares(SoftwareList):
     multicast: Annotated[str, Query(pattern.NET_IP)]
 
-# 心跳包模型
-class HeartPkgs(BaseModel):
-    mac: Annotated[str, None] = \
-        Query(pattern="([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})")
-    ip: Annotated[str, None] = \
-        Query(pattern="((1\d{2}\.)|(2[0-5]{2}\.)|(\d{1,2}\.)){3}((1\d{2}\.)|(\d{3}\.))")
-    softwares: Annotated[List[Software], None] = None
-    
