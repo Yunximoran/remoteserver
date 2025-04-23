@@ -503,7 +503,7 @@ class PathNode(_Node):
     
     @staticmethod
     def __check_filename(text):
-        return re.match("^[^\\\/]+?\.[^\\\/]+$", text)
+        return re.match(r"^[^\\\/]+?\.[^\\\/]+$", text)
     
     def __str__(self):
         return f"Path: {self.tag}"
