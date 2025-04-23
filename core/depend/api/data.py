@@ -1,9 +1,11 @@
 import json
+import asyncio
 from typing import Annotated, AnyStr
 from pathlib import Path
 from fastapi import(
     APIRouter,
-    Query
+    Query,
+    WebSocket
 )
 
 from static import DB
@@ -11,19 +13,32 @@ from lib import Resolver
 from lib.strtool import pattern
 from lib.sys.system import OS
 
-from ._method.get import (
-    get_classify,
-    get_netspeed,
-    get_client_information,
-    get_client_files
-)
+from ._method.get import get_realtime_data
 resolver = Resolver()
 filepath = resolver("path", "local")
+
 
 # 数据接口
 router = APIRouter()
 prefix = "/server/data"
 tags = ["data"]
+
+@router.websocket("/realtime")
+async def websocket_endpoint(websocket:WebSocket):
+    # 实时数据
+    await websocket.accept()
+    print("conning websock")
+    try:
+        while True:
+            realtime = get_realtime_data(filepath.path)
+            print(realtime)
+            await asyncio.sleep(1)
+            await websocket.send_json(json.dumps(realtime, ensure_ascii=False, indent=4))
+    except RuntimeError:
+        pass
+    except Exception as e:
+        print(f"{e}")
+        await websocket.close()
 
 @router.get("/softwarelsit")
 async def get_softwarelist():
@@ -65,31 +80,11 @@ async def get_not_classified():
         "classified": classified,
         "notclassified": noclassified
     }
-
-
-@router.get("/realtime")
-async def get_realtime_data():
-    """
-    实时更新数据，需要定期调用
-        从redis中获取数据
-    """
-    return {
-        "client_reports": DB.loads(DB.hgetall("reports")),        # 客户端控制运行结果汇报
-        "client_waitdones": DB.loads(DB.hgetall("waitdones")),    # 客户端待办事项信息
-        "instructlist": DB.loads(DB.hgetall("instructlist")),     # 预存指令列表
-        "softwarelist": DB.loads(DB.hgetall("softwarelist")),
-        "classify": get_classify(),             # 分类数据
-        "classifylist": DB.smembers("classifylist"),    # 分类索引
-        "netspeed": get_netspeed(),
-        "client_information": get_client_information(),
-        "files": get_client_files(filepath.path)
-    }
-    
     
 @router.get("/check_dirs")
 async def iter_dir(base:str=None):
     path = Path(base)
-    if path.exists() and path.is_dir():
+    if path.exists() and path.is_dir() and base is not None:
         return {path.glob("*")}
     else:
         return {"ERROR": f"{base} is not exists or not a dir"}

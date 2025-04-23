@@ -4,7 +4,7 @@ from lib.sys import NetWork
 
 
 # 网络配置选项
-NET = NetWork("以太网 3")           # 指定服务端网卡
+NET = NetWork("WLAN")           # 指定服务端网卡
 BROADCAST = "192.168.255.255"    # 广播域
 
 # 服务器配置选项
@@ -17,8 +17,7 @@ CORS = [    # 跨域资源
 DATABASE = {
     "redis": {
         "host": "192.168.5.208",
-        "port": 6381,
-        "password": "962464X",
+        "port": 6379,
         "usedb": 0
     }
 }

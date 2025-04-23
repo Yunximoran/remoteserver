@@ -4,6 +4,7 @@ from lib.strtool import pattern
 from static import DB
 from pathlib import Path
 
+
 def parse_heartpkgs() -> dict:   # 解析心跳包数据
     heart_packages = DB.loads(DB.hgetall("heart_packages"))
     return heart_packages
@@ -84,15 +85,8 @@ def get_classify(): # 获取分类数据
             item['os'] = get_os(ip)
             item['working'] = get_working(ip)
             item['files'] = get_files(ip)
+            item['netspeed'] = get_netspeed(ip)
     return classify
-
-
-def get_filestatus(filename, ip, status):
-    statuslist =  DB.loads(DB.hget(filename, ip))
-    if statuslist:
-        return status in  statuslist
-    else:
-        return False
 
 def get_client_files(filedir:Path):
     files = {file.name: {} for file in filedir.rglob("*") if file.is_file()}
@@ -104,7 +98,6 @@ def get_client_files(filedir:Path):
                 files[file][ip]= {
                     "working": get_working(ip),
                     "schedule": get_files(ip)[file],
-                    "compressed": get_filestatus(file, ip, "compressed")
                 }
     return files
 
@@ -122,5 +115,25 @@ def get_client_information():   # 获取客户端信息
             "netspeed": heart_pkgs[ip]['netspeed']
         }
     return information
+
+def get_realtime_data(filepath):
+    """
+    实时更新数据，需要定期调用
+        从redis中获取数据
+    """
+    return {
+        "client_reports": DB.loads(DB.hgetall("reports")),        # 客户端控制运行结果汇报
+        "client_waitdones": DB.loads(DB.hgetall("waitdones")),    # 客户端待办事项信息
+        "instructlist": DB.loads(DB.hgetall("instructlist")),     # 预存指令列表
+        "softwarelist": DB.loads(DB.hgetall("softwarelist")),
+        "classify": get_classify(),             # 分类数据
+        "classifylist": list(DB.smembers("classifylist")),    # 分类索引
+        "netspeed": get_netspeed(),
+        "client_information": get_client_information(),
+        "files": get_client_files(filepath)
+    }
+
+
 if __name__ == "__main__":
-    print(get_classify())
+    Path.cwd().joinpath("local")
+    print(get_realtime_data(Path.cwd().joinpath("local")))

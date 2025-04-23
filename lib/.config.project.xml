@@ -42,8 +42,8 @@
 		</tcp>
 	</ports>
 	<network describe="局域网IP和MAC">
-		<ip>192.168.8.243</ip>
-		<mac>6C-3C-8C-1B-BC-7F</mac>
+		<ip>192.168.31.176</ip>
+		<mac>20-1E-88-F5-05-B9</mac>
 	</network>
 	<path>
 		<local struct="服务端资源目录">
