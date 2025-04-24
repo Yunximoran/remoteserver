@@ -1,48 +1,57 @@
+import sys, json
 from lib import Resolver
 from lib.init.resolver import __resolver
 from lib.sys import NetWork
 
 
-# 网络配置选项
-NET = NetWork("WLAN")           # 指定服务端网卡
-BROADCAST = "192.168.255.255"    # 广播域
+args = sys.argv 
 
-# 服务器配置选项
-CORS = [    # 跨域资源
-    "https://127.0.0.1:8080",
-    "http://127.0.0.1:8080"
-]
+config = args[1]
+with open(config, 'r', encoding="utf-8") as f:
+    conf = json.load(f)
+    print(conf)
+    conf_default = conf['default']
+    conf_server = conf['server']
+    conf_client = conf['client']
 
-# 数据库配置选项
-DATABASE = {
-    "redis": {
-        "host": "192.168.5.208",
-        "port": 6379,
-        "usedb": 0
-    }
-}
+BROADCAST = conf_default['broadcast']
+
+CORS = conf_server['cors']
+NET = NetWork(conf_server['usenet'])
+DATABASE = conf_server['redis']
+
 
 
 resolver = Resolver()
 
 # 初始化数据库配置
 def set_database():
-    for database in DATABASE:
-        data = DATABASE[database]
-        conf = __resolver("database", database)
-        if "host" in data:
-            conf.search("host").settext(data["host"])
-        if "port" in data:
-            conf.search("port").settext(data["port"])
-            
-        if "password" in data:
-            conf.setattrib("password", data["password"])
-            
-        if "user" in data:
-            conf.setattrib("user", data["user"])
-            
-        if "usedb" in data:
-            conf.search("db").settext(data["usedb"])
+    conf = __resolver("database", "redis")
+    if "host" in DATABASE:
+        conf.search("host").settext(DATABASE["host"])
+    else:
+        raise Exception("no host")
+    if "port" in DATABASE:
+        conf.search("port").settext(DATABASE["port"])
+    else:
+        raise Exception("no port")
+        
+    if DATABASE["password"]:
+        conf.setattrib("password", DATABASE["password"])
+    else:
+        if "password" in conf.attrib:
+            conf.delattrib("password")   
+        
+    if DATABASE["user"]:
+        conf.setattrib("user", DATABASE["user"])
+    else:
+        if "user" in conf.attrib:
+            conf.delattrib("user")
+        
+    if "usedb" in DATABASE:
+        conf.search("db").settext(DATABASE["usedb"])
+    else:
+        conf.search('db').settext(0)
    
 # 初始化网络配置
 def set_network():
@@ -68,6 +77,7 @@ def set_network():
 def set_server():
     server = resolver("server")
     cors = server.search('cors')
+
     if cors:
         for item in CORS:
             try:
@@ -77,6 +87,10 @@ def set_server():
             
 # 保存更改
 def close():
+    with open(config, "w", encoding='utf-8') as f:
+        conf['client']['ip_server'] = NET.IPv4
+        json.dump(conf, f, ensure_ascii=False, indent=4)
+
     resolver.save()
     __resolver.save()
 
