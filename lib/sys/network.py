@@ -3,6 +3,15 @@ import struct
 import platform
 import time
 
+net_if_addrs = psutil.net_if_addrs()
+net_if_stats = psutil.net_if_stats()
+
+# linux 和 window 获取 mac 的方法不一样
+if platform.system() == "Windows":
+    link = "AF_LINK"
+elif platform.system() == "Linux":
+    link = "AF_PACKET"
+
 
 class _NetWorkTools:
     @staticmethod
@@ -48,35 +57,10 @@ class _NetWorkTools:
                 raise ValueError("incorrect mac format")
         else:
             raise ValueError("incorrect mac format")
-    
-class NetWork(_NetWorkTools):
-    def __init__(self, bind):
-        # 绑定网卡
-        self.__all_local_network = self.__checknet()
-
-        self.name = bind
-        self.net = self.__all_local_network[bind]
-        self.mac = self.net['mac']
-        self.IPv4 = self.net["IPv4"]
-        self.IPv6 = self.net["IPv6"]
         
-        self.info = {
-            bind: self.net
-        }
-    
-    def __checknet(self) -> dict:
-        """
-            获取本地所有网卡配置
-        """
-        net_if_addrs = psutil.net_if_addrs()
-        result = {}
-
-        # linux 和 window 获取 mac 的方法不一样
-        if platform.system() == "Windows":
-            link = "AF_LINK"
-        elif platform.system() == "Linux":
-            link = "AF_PACKET"
-
+    @staticmethod
+    def checkallnet():
+        results = {}
         for interface_name, interface_addresses in net_if_addrs.items():
             net = {}
             for address in interface_addresses:
@@ -86,58 +70,70 @@ class NetWork(_NetWorkTools):
                     net["IPv4"] = address.address
                 elif address.family.name.startswith(link):
                     net["mac"] = address.address
-            result[interface_name] = net
-        return result
+            results[interface_name] = net
+        return results
     
-
-def choosenet(choose: str = None) -> dict:
-    """
-    choose: 指定工作网卡，None时返回所有网卡参数
-    return: 返回网卡数据字典，key为网卡名称，value为包含IPv4/IPv6/MAC地址的字典
-    """
-    net_if_addrs = psutil.net_if_addrs()
-    result = {}
-
-    for interface_name, interface_addresses in net_if_addrs.items():
-        if choose is None or choose == interface_name:
-            net = {}
-            for address in interface_addresses:
-                if address.family.name.startswith('AF_INET6'):
-                    net["IPv6"] = address.address
-                elif address.family.name.startswith('AF_INET'):
-                    net["IPv4"] = address.address
-                elif address.family.name == 'AF_LINK':
-                    net["mac"] = address.address
-            result[interface_name] = net
-            if choose is not None:  # 如果指定了网卡，直接返回
-                return result[interface_name]
+    @staticmethod
+    def decimalcidrblock(ipv4:str):
+        if ipv4 == "localhost":
+            ipv4 = "127.0.0.1"
+        decimal = 0
+        blocks = [int(block) for block in ipv4.split(".") if int(block) <= 255 and int(block) >= 0]
+        if len(blocks) != 4:
+            raise Exception(f"Inviad IP {ipv4}")
+        
+        for i, block in enumerate(blocks[::-1]):
+            decimal += block * (255 ** i)
+        return decimal
     
-    return result
-
-def formatmac(mac: str) -> str:
-    # 格式化MAC地址，支持12位和17位格式
-    if len(mac) == 12:
-        pass
-    if len(mac) == 17:
-        if mac.count(":") == 5 or mac.count("-") == 5:
-            sep = mac[2]
-            mac = mac.replace(sep, '')
+    def cidrblock(decimal):
+        """
+        :0.0.0.0    : 0
+        :127.0.0.1  : 2105834626
+        A: 165813750 : 182460405 <--> 10.0.0.0 : 10.255.255.255
+        B: 2853036900 : 2854077555 <--> 172.16.0.0 : 176.31.255.255
+        C: 3194548200 : 3194613480 <--> 198.168.0.0 : 192.168.255.255
+        """
+        if decimal == 0 or decimal == 2105834626: pass
+        elif decimal <= 182460405 and decimal >= 165813750: pass
+        elif decimal <= 2854077555 and decimal >= 2853036900: pass
+        elif decimal <= 3194613480 and decimal >= 3194548200: pass
         else:
-            raise ValueError("incorrect MAC format")
-    else:
-        raise ValueError("incorrect MAC format")
-    
-    return mac   
+            raise Exception("Inviad Net")
+        blocks = ["0"] * 4
+        index = 3
+        while decimal > 0:
+            blocks[index] = str(decimal % 255)
+            decimal //= 255
+            index -= 1
 
-def create_magic_packet(mac) -> bytes:
-    mac = formatmac(mac)
-    data = b'FF' * 6 + (mac * 16).encode()
-    send_data = b""
-    for i in range(0, len(data), 2):
-        send_data = send_data + struct.pack("B", int(data[i: i + 2], 16))
-    return send_data
+        return ".".join(blocks)
+    
+    
+
+    
+class NetWork(_NetWorkTools):
+
+    def __init__(self, bind=None):
+        # 绑定网卡
+        """
+            获取本地所有网卡配置
+        """
+        if bind not in net_if_addrs:
+            raise Exception(f"not found net: {bind}")
+        self.name = bind
+        for info in net_if_addrs[bind]:
+            if info.family.name.startswith("AF_INET6"): self.IPv6 = info.address
+            elif info.family.name.startswith("AF_INET"):
+                self.IPv4 = info.address
+                self.netmask = info.netmask
+            elif info.family.name.startswith(link): self.mac = info.address
+        stat = net_if_stats[bind]
+        if stat.isup:
+            self.speed = net_if_stats[bind].speed
+            self.mtu = net_if_stats[bind].mtu
 
 
 if __name__ == "__main__":
-    net = NetWork("WLAN")
-    print(net.create_magic_packet(net.mac))
+    L = NetWork.decimalcidrblock("127.0.0.1")
+    print(L)

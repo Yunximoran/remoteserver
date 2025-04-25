@@ -7,7 +7,7 @@ import uvicorn
 from core.depend.protocol.tcp import Listener
 from core.depend.protocol.udp import BroadCastor
 
-from lib.sys.processing import Process
+from lib.sys.processing import Process, multiprocessing
 from lib import Resolver
 
 resolver = Resolver()
@@ -20,11 +20,7 @@ ISRELOAD = resolver("server", "reload")
 
 # 监听设置
 SERVERADDRESS =(resolver("network", "ip"), resolver("ports", "tcp", "server"))
-
-# 广播设置
-BROADCAST_1 = ("0.0.0.0", resolver("ports", "udp", "broad"))    # resolver("network", "ip")
-
-
+BROADCAST_1 = ("0.0.0.0", resolver("ports", "udp", "broad"))
 
 class Start:
     Tasks: List[Process] = []
@@ -66,7 +62,5 @@ class Start:
 
 
 if __name__ == "__main__":
-    """
-    多进程会被
-    """
+    multiprocessing.freeze_support()
     Start()

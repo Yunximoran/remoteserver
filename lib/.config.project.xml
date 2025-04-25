@@ -19,7 +19,7 @@
 	</server>
 	<sock describe="通信配置">
 		<udp describe="配置组播组和广播域">
-			<ip-broad>192.168.255.255</ip-broad>
+			<ip-broad>255.255.255.255</ip-broad>
 			<ip-multi>224.25.25.1</ip-multi>
 		</udp>
 		<tcp describe="配置TCP性能参数">

@@ -11,11 +11,12 @@ from lib.catch import _CatchDataBase
 catch = _CatchDataBase()
 
 
-HOST = __resolver("redis", "host")
-PORT = __resolver("redis", "port")
-DB = __resolver("redis", "db")
+REDISCONF = __resolver("redis")
+HOST = REDISCONF.search("host").data
+PORT = REDISCONF.search("port").data
+DB = REDISCONF.search("db").data
 try:
-    PASSWORD = __resolver("redis")["password"]
+    PASSWORD = REDISCONF.password
 except Exception:
     PASSWORD = None
 

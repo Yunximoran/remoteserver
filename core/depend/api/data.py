@@ -4,8 +4,7 @@ from typing import Annotated, AnyStr
 from pathlib import Path
 from fastapi import(
     APIRouter,
-    Query,
-    WebSocket
+    Query
 )
 
 from static import DB
@@ -23,22 +22,10 @@ router = APIRouter()
 prefix = "/server/data"
 tags = ["data"]
 
-@router.websocket("/realtime")
-async def websocket_endpoint(websocket:WebSocket):
+@router.get("/realtime")
+async def realtime():
     # 实时数据
-    await websocket.accept()
-    print("conning websock")
-    try:
-        while True:
-            realtime = get_realtime_data(filepath.path)
-            print(realtime)
-            await asyncio.sleep(1)
-            await websocket.send_json(json.dumps(realtime, ensure_ascii=False, indent=4))
-    except RuntimeError:
-        pass
-    except Exception as e:
-        print(f"{e}")
-        await websocket.close()
+    return get_realtime_data(filepath.path)
 
 @router.get("/softwarelsit")
 async def get_softwarelist():

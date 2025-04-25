@@ -7,12 +7,16 @@ from lib.sys import NetWork
 args = sys.argv 
 
 config = args[1]
-with open(config, 'r', encoding="utf-8") as f:
-    conf = json.load(f)
-    print(conf)
-    conf_default = conf['default']
-    conf_server = conf['server']
-    conf_client = conf['client']
+try:
+    with open(config, 'r', encoding="utf-8") as f:
+        conf = json.load(f)
+        print(conf)
+        conf_default = conf['default']
+        conf_server = conf['server']
+        conf_client = conf['client']
+except Exception:
+    print("ERROR")
+    sys.exit()
 
 BROADCAST = conf_default['broadcast']
 
@@ -20,7 +24,7 @@ CORS = conf_server['cors']
 NET = NetWork(conf_server['usenet'])
 DATABASE = conf_server['redis']
 
-
+print(conf)
 
 resolver = Resolver()
 
@@ -28,11 +32,11 @@ resolver = Resolver()
 def set_database():
     conf = __resolver("database", "redis")
     if "host" in DATABASE:
-        conf.search("host").settext(DATABASE["host"])
+        conf.search("host").setdata(DATABASE["host"])
     else:
         raise Exception("no host")
     if "port" in DATABASE:
-        conf.search("port").settext(DATABASE["port"])
+        conf.search("port").setdata(DATABASE["port"])
     else:
         raise Exception("no port")
         
@@ -49,9 +53,9 @@ def set_database():
             conf.delattrib("user")
         
     if "usedb" in DATABASE:
-        conf.search("db").settext(DATABASE["usedb"])
+        conf.search("db").setdata(DATABASE["usedb"])
     else:
-        conf.search('db').settext(0)
+        conf.search('db').setdata(0)
    
 # 初始化网络配置
 def set_network():
@@ -61,17 +65,17 @@ def set_network():
     mac = net.search("mac")
     
     if not ip:
-        net.addelement("ip", text=NET.IPv4)
+        net.create("ip", text=NET.IPv4)
     else:
-        ip.settext(NET.IPv4)
+        ip.setdata(NET.IPv4)
         
     if not mac:
-        net.addelement("mac", text=NET.mac)
+        net.create("mac", text=NET.mac)
     else:
-        mac.settext(NET.mac)
+        mac.setdata(NET.mac)
         
     # 设置广播域
-    sock.search("ip-broad").settext(BROADCAST)
+    sock.search("ip-broad").setdata(BROADCAST)
 
 # 初始化服务器配置
 def set_server():

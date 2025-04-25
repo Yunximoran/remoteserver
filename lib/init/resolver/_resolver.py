@@ -4,8 +4,8 @@ from typing import List, AnyStr, ByteString
 from xml.etree import ElementTree as et
 from xml.etree.ElementTree import Element
 
-from ._node import Node, PathNode, ItemsNode
-from ..exception import *
+from .nodes import Node, PathNode, ItemsNode
+from .nodes.exception import *
     
 WORKDIR = Path.cwd()
 PRIVATECONF = WORKDIR.joinpath("lib", "init", ".config.xml")
@@ -17,8 +17,7 @@ class _Resolver:
         self.__file = file
         self.__conf = et.parse(file)
         self.__root = self.__conf.getroot()
-
-        self.root = self.deep(self.__root)
+        self.root = self._deep(self.__root)
         
         
     def save(self):
@@ -27,7 +26,7 @@ class _Resolver:
         # 写入修改
         self.__conf.write(self.__file, encoding=ENCODING)
         
-    def deep(self, root: Element, parent: Node = None) -> Node|PathNode|ItemsNode:
+    def _deep(self, root: Element, parent: Node = None) -> Node|PathNode|ItemsNode:
         """
             解析器
         返回字典数据
@@ -36,53 +35,38 @@ class _Resolver:
         """
         # 创建节点
         node = Node(root, parent)
-        
         # 解析路径配置
         if "struct" in root.attrib:
             return PathNode(root, parent)
+        
         # 解析集合配置
         elif "items" in root.attrib:
             return ItemsNode(root, parent)
+        
         else:
             # 遍历子元素，创建Node绑定父节点为当前节点
             for elem in root:
-                next = self.deep(elem, parent=node)
-                node.addchild(next)
+                next = self._deep(elem, parent=node)
+                node._addchild(next)
         return node   
     
     def tohtml(self, node:Element) -> AnyStr:
         # 获取配置文件原始文档
-        return self.__encoding(et.tostring(node))
-    
-    
-    def __list_options(self, node:Element) -> List[AnyStr]:
-        # 解析列表类型配置
-        """
-            规定列表数据同一使用li
-        并且li元素只具备text属性
-        """
-        return [li.text for li in node.findall("li")]       
-    
-    def __encoding(self, context: AnyStr | ByteString)\
-        -> AnyStr | ByteString:
-        # 编码转换器
-        encoding = self.root.search("global", "encoding")
-        if encoding is None:
-            encoding = "UTF-8"
-        try:
-            return context.encode(encoding)
-        except AttributeError:
-            return context.decode(encoding)
+        return et.tostring(node)   
     
     def __call__(self, *args, is_node=False) -> Node|PathNode|ItemsNode|AnyStr:
         node = self.root.search(*args)
-        if not node:
+        if node is None:
             setpath = " - ".join(args)
             raise NodeExistError(f"Setting not Exist: {setpath}")
         else:
             if node.type() in ["struct", "tree", "items"] or is_node:
                 return node
             return node.data
+    
+    def __iter__(self):
+        if self.root:
+            return self.root.__iter__()
         
     def __enter__(self):
         return self
@@ -93,6 +77,7 @@ class _Resolver:
 __all__ = [
     "PRIVATECONF",
     "PUBLICCONF",
+
     "_Resolver"
 ]
     
