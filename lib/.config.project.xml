@@ -1,0 +1,56 @@
+<root>
+	<global>
+		<encoding>UTF-8</encoding>
+		<logs>
+			<level>info</level>
+		</logs>
+	</global>
+	<server>
+		<app>core:app</app>
+		<host>127.0.0.1</host>
+		<port>8000</port>
+		<reload>yes</reload>
+		<cors items="跨域资源">
+			<li>https://localhost:8080</li>
+			<li>http://localhost:8080</li>
+			<li>https://127.0.0.1:8080</li>
+			<li>http://127.0.0.1:8080</li>
+		</cors>
+	</server>
+	<sock describe="通信配置">
+		<udp describe="配置组播组和广播域">
+			<ip-broad>255.255.255.255</ip-broad>
+			<ip-multi>224.25.25.1</ip-multi>
+		</udp>
+		<tcp describe="配置TCP性能参数">
+			<listenes>5</listenes>
+			<timeout>1</timeout>
+		</tcp>
+		<recv-size describe="设置接受字节">2048</recv-size>
+	</sock>
+	<ports describe="端口配置">
+		<udp>
+			<server>8081</server>
+			<broad describe="心跳包接收端口">8082</broad>
+			<multi describe="软件清单发送端口">8083</multi>
+			<client>8084</client>
+		</udp>
+		<tcp>
+			<client describe="客户端指令监听端口">8085</client>
+			<client-file describe="客户端TCP文件接收端口">8086</client-file>
+			<server describe="服务端，结果监听端口">9095</server>
+		</tcp>
+	</ports>
+	<network describe="局域网IP和MAC">
+		<ip>192.168.31.176</ip>
+		<mac>20-1E-88-F5-05-B9</mac>
+	</network>
+	<path>
+		<local struct="服务端资源目录">
+			<dir name="instructs">
+			</dir>
+			<dir name="packs">
+			</dir>
+		</local>
+	</path>
+</root>

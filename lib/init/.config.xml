@@ -1,0 +1,33 @@
+<root>
+	<database>
+		<redis>
+			<host>localhost</host>
+			<port>6389</port>
+			<db>0</db>
+		</redis>
+		<mysql user="root" password="b'cmFueGk='">
+			<host>localhost</host>
+			<port>3306</port>
+			<db>test</db>
+		</mysql>
+	</database>
+	<preformance>
+		<min-processes>5</min-processes>
+		<max-processes>10</max-processes>
+		<tcp-listenes>5</tcp-listenes>
+	</preformance>
+	<default describe="工具库默认配置">
+		<log-settings describe="logger 默认配置">
+			<level>info</level>
+			<logs struct="模块日志文件" status="hidden" describe="内部日志保存路径">
+				<dir name="db" describe="数据库日志文件">
+					<li describe="Redis日志文件">redis.log</li>
+					<li describe="日志文件">mysql.log</li>
+				</dir>
+				<li describe="多进程日志文件">process.log</li>
+				<li describe="Sock日志文件">socket.log</li>
+			</logs>
+		</log-settings>
+		<encoding>utf-8</encoding>
+	</default>
+</root>
