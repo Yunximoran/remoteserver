@@ -1,5 +1,7 @@
+__pycache__/
 */__pycache__
-*.pyc
+*.py[cod]
+*$py.class
 
 !local/instructs
 !local/packs
@@ -7,7 +9,7 @@ local/instructs/*
 local/packs/*
 
 .conda
-*/logs
-*/.logs
+logs/*
+*/.logs/
 *.log.*
 *.log
