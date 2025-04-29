@@ -1,30 +1,28 @@
 import socket
-import struct
-import re, time
 import json
 from pathlib import Path
 from functools import partial
-from fastapi import UploadFile
 from lib.sys.processing import(
     Pool,
     Process,
 )
 from lib import Resolver
 from lib.manager._logger import Logger
-from static import DB
+from lib.database import Redis
 from lib.sys.network import NetWork as NET
-from core.depend.protocol.tcp import Connector
+from lib.sys.sock.tcp import Connector
 from datamodel.instruct import Instruct
 
 
 resolver = Resolver()
 logger = Logger("control", log_file="control.log")
-
+database = Redis()
 
 
 # 广播地址
 SERVERIP = resolver("network", "ip")
 FILEPORT = resolver("ports", "tcp", "client-file")
+INSTRUCTSPORT = resolver("ports", "tcp", "client")
 
 LOCALPATH = resolver("path", "local")
 
@@ -81,7 +79,6 @@ class Control:
                                    }
                                )
                 tasks.get()
-
             if instructs is not None:
                 # 发送指令数据
                 logger.record(1, f"{instructs}")
@@ -98,22 +95,18 @@ class Control:
     @staticmethod                           
     def sendtofile(ip, files:list[Path]): # 发送文件数据
         # 创建下载指令
-        heart_packages = DB.loads(DB.hget("heart_packages", ip))
+        heart_packages = database.loads(database.hget("heart_packages", ip))
         instruct = Instruct(label="download", instruct="file", os=heart_packages['os']).model_dump_json()
         
         # 发送指令，通知客户端准备接收文件
-        conn = Connector()
-        conn.connect(ip)
-        
-        
+        conn = Connector((ip, INSTRUCTSPORT))
         is_OK = conn.sendwait(json.dumps([instruct], ensure_ascii=False, indent=4))
         # 确认客户端准备就绪
         
         if is_OK == "OK":
             logger.record(1, f"The client: {ip} is ready")
             # 建立文件传输通道
-            file_conn = Connector()
-            file_conn.sock.connect((ip, FILEPORT))
+            file_conn = Connector((ip, FILEPORT))
             
             file_conn.sendwait(str(len(files))) # 发送的文件数量
         
@@ -138,7 +131,7 @@ class Control:
                     logger.record(1, f"send file: {filename} start") 
                     file_conn.sendwait(filename)
                     file_conn.sendwait(filesize)
-                    file_conn.sock.sendfile(fp) # 发送文件数据
+                    file_conn.sendfile(fp) # 发送文件数据
                     # 等待接收完成
                     status = file_conn.recv()
                     logger.record(1, status)
@@ -153,12 +146,11 @@ class Control:
     @staticmethod
     def sendtoshell(ip, instructs):
         # 发送指令包
-        conn = Connector()
-        conn.connect(ip)
+        conn = Connector((ip, INSTRUCTSPORT))
         logger.record(1, f"send: {instructs} to {ip}")
         conn.send(json.dumps(instructs, ensure_ascii=False, indent=4))
         reports = conn.recv()
-        DB.hset("reports", ip, reports)
+        database.hset("reports", ip, reports)
         conn.close()
 
     @staticmethod
@@ -168,7 +160,7 @@ class Control:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         sock.bind((SERVERIP, 9))
         # 创建唤醒魔术包
-        heart_packages = json.loads(DB.hget("heart_packages", ip))
+        heart_packages = json.loads(database.hget("heart_packages", ip))
         MAC:str = heart_packages["mac"]
         magic_pack = NET.create_magic_packet(MAC)
         
@@ -188,7 +180,7 @@ class Control:
         
         # 如果toclients是空列表，默认获取所有客户端
         if toclients == []:
-            clients = DB.hgetall("client_status")
+            clients = database.hgetall("client_status")
             
             # 遍历地址群 返回 连接指定状态的客户端
             for ip in clients:
@@ -198,7 +190,7 @@ class Control:
                     breaks.append(ip)
         else:
             for ip in toclients:
-                if DB.hget("client_status", ip) == "true":
+                if database.hget("client_status", ip) == "true":
                     connings.append(ip)
                 else:
                     breaks.append(ip)

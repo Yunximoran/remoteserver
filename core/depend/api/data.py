@@ -7,13 +7,16 @@ from fastapi import(
     Query
 )
 
-from static import DB
 from lib import Resolver
-from lib.strtool import pattern
-from lib.sys.system import OS
+from lib.database import Redis
+from lib.sys.system import Information
 
-from ._method.get import get_realtime_data
+from ._method.get import dispose_realtime
+
+
+OS = Information.OS
 resolver = Resolver()
+database = Redis()
 filepath = resolver("path", "local")
 
 
@@ -25,11 +28,11 @@ tags = ["data"]
 @router.get("/realtime")
 async def realtime():
     # 实时数据
-    return get_realtime_data(filepath.path)
+    return dispose_realtime(filepath.path)
 
 @router.get("/softwarelsit")
 async def get_softwarelist():
-    return {"softwarelist": DB.loads(DB.hgetall("softwarelist"))}   # 软件列表
+    return {"softwarelist": database.loads(database.hgetall("softwarelist"))}   # 软件列表
 
 
 @router.get("/iter_local_instructs")    # 遍历脚本目录
@@ -60,8 +63,8 @@ async def get_packages():
 
 @router.get("/not_classified")
 async def get_not_classified():
-    classified = set(DB.hgetall("classified"))
-    allclients = set(DB.hgetall("client_status"))   # 获取全部连接客户端
+    classified = set(database.hgetall("classified"))
+    allclients = set(database.hgetall("client_status"))   # 获取全部连接客户端
     noclassified = allclients - classified
     return {
         "classified": classified,

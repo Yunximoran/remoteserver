@@ -1,94 +1,128 @@
 from fastapi import Query
 from typing import Annotated
 from lib.strtool import pattern
-from static import DB
+from lib.database import Redis
 from pathlib import Path
 
+from ._tables import *
 
-def parse_heartpkgs() -> dict:   # 解析心跳包数据
-    heart_packages = DB.loads(DB.hgetall("heart_packages"))
-    return heart_packages
+database = Redis()
 
-def get_netspeed(ip=None):  # 获取网络带宽
+
+# ===================HEART PACKAGES===================
+def parse_heartpkgs() -> dict:                                                                  # 解析心跳包数据
+    return database.loads(database.hgetall(heartpkgs))
+
+def getitem(ip=None, tag=None):                                                                 # 获取指定数据
     heartpkgs = parse_heartpkgs()
-    if ip:
-        return heartpkgs[ip]['netspeed']
-    else:
-        return {ip: heartpkgs[ip]['netspeed'] for ip in heartpkgs}
 
-def get_files(ip=None):
-    heartpkgs = parse_heartpkgs()
-    if ip:
-        return heartpkgs[ip]['files']
-    else:
-        return {ip:heartpkgs[ip]['files'] for ip in heartpkgs}
+    if ip: 
+        if ip not in heartpkgs: return None
+        return heartpkgs[ip][tag]
+    else:  
+        if tag is None: return heartpkgs
+        return {ip: heartpkgs[ip][tag] for ip in heartpkgs}
 
-def get_working(ip=None):   # 获取工作目录
-    heartpkgs = parse_heartpkgs()
-    if ip:
-        return heartpkgs[ip]['working']
-    else:
-        return {ip: heartpkgs[ip]['working'] for ip in heartpkgs}
+def get_netspeed(ip=None):                                                                      # 获取网络带宽
+    return getitem("netspeed", ip)
+
+def get_files(ip=None):                                                                         # 获取文件数据
+    return getitem(ip, "files")
+
+def get_working(ip=None):                                                                       # 获取工作目录
+    return getitem(ip, "working")
  
+def get_os(ip=None):                                                                            # 获取系统标识
+    return getitem(ip, "os")
 
-def get_os(ip=None):
-    heartpkgs= parse_heartpkgs()
-    if ip:
-        return heartpkgs[ip]['os']
-    else:
-        return {ip: heartpkgs[ip]['os'] for ip in heartpkgs}
-    
-def get_soft_information(   # 获取软件信息
-    cln: Annotated[str, "分类名称"], 
-    softname: Annotated[str, "软件名称"],
-    ip: Annotated[str, Query(pattern=pattern.NET_IP)]
+def get_mac(ip=None):                                                                           # 获取mac地址
+    return getitem(ip, "mac")
+
+def get_softs(ip=None):                                                                         # 获取软件数据
+    return getitem(ip, "softwares")
+
+
+# ===================  CLASSIFY  ===================
+def parse_classify():                                                                           # 解析分类表数据
+    return database.loads(database.hgetall(classify))
+
+
+# ================== REPORTS ======================
+def parse_reports():                                                                            # 解析汇报数据
+    return database.loads(database.hgetall(reports))
+
+
+# ================ INSTURCTS ====================
+def parse_instructs():                                                                          # 解析预存指令
+    return database.loads(database.hgetall(instructlist))
+
+
+# ================ SOFTWARES ====================
+def parse_softwares():                                                                          # 解析软件清单
+    return database.loads(database.hgetall(softwarelist))
+
+
+# ================== CHECK DATA ==================
+def check_index(ip):                                                                            # 校验连接索引
+    return database.hget(clientstatus, ip) is not None
+
+def check_conning(ip):                                                                          # 校验连接状态
+    return database.hget(clientstatus, ip) == "true"
+
+def check_classify(cln):                                                                        # 校验分类表索引
+    return cln in database.smembers(classifylist)
+
+def check_exits_clients(ip):
+    return ip in database.hgetall(clientstatus)
+
+def check_exits_softwares(soft):
+    return soft in database.hgetall(softwarelist)
+
+def check_softstatus(ip, soft):                                                                 # 校验软件状态
+    softs = get_softs(ip)
+    for item in softs:
+        if item['ecdis']['name'] == soft:
+            return item['conning']
+    return False
+
+# =================== DISPOSE ===================
+def dispose_soft_information(                                                                   # 处理软件信息
+    ip: Annotated[str, Query(pattern=pattern.NET_IP)],
+    softname: Annotated[str, "软件名称"]
     ):
     """
         获取不同分类下的软件信息
-    """
-    mac = None
-    status = False
-    conning = False
-    classifylist = DB.smembers("classifylist")
-    if cln not in classifylist:
-        return None, None, None # {"ERROR": f"classify: {cln} is not exists"}
-    
-    info = DB.loads(DB.hget("heart_packages", ip))
-    if info is None:
-        return None, None, None # {"ERROR": f"client: {ip} never conected"}
-    else:
-        mac = info['mac']
-        conning = DB.hget("client_status", ip) == "true"
-        
-        # 客户端连接时，软件才去检查软件是否启动
-        if conning:
-            softwares = info['softwares']
-            for soft in softwares:
-                if softname == soft['ecdis']['name'] and soft['conning']:
-                    status = True
-                else:
-                    continue
-                
-    return mac, status, conning
 
-def get_classify(): # 获取分类数据
-    classify = DB.loads(DB.hgetall("classify"))
+    :param ip:  软件IP
+    :param softname:  软件名称
+    :type ip: str query(pattern=pattern.NET_IP)
+    :type softname: str
+
+    """
+    conning = check_conning(ip)
+
+    # 客户端连接时采取检查软件状态
+    if conning: status = check_softstatus(ip, softname)
+    else:       status = False
+    return status, conning
+
+def dispose_classify_information():                                                             # 处理分类信息
+    classify = parse_classify()
 
     for cln in classify:
         items:list[dict] = classify[cln]
-
         for item in items:
-
             soft = item["soft"]
             ip = item["ip"]
-            item['mac'], item['status'], item['conning'] = get_soft_information(cln, soft, ip)
+            item['status'], item['conning'] = dispose_soft_information(soft, ip)
             item['os'] = get_os(ip)
+            item['mac'] = get_mac(ip)
             item['working'] = get_working(ip)
             item['files'] = get_files(ip)
             item['netspeed'] = get_netspeed(ip)
     return classify
 
-def get_client_files(filedir:Path):
+def dispose_client_files(filedir:Path):                                                         # 处理文件信息
     files = {file.name: {} for file in filedir.rglob("*") if file.is_file()}
     fileclient = get_files()
     for ip in fileclient:
@@ -100,40 +134,35 @@ def get_client_files(filedir:Path):
                     "schedule": get_files(ip)[file],
                 }
     return files
-
-
-
-
    
-def get_client_information():   # 获取客户端信息
+def dispose_client_information():                                                               # 处理客户端信息
+    # 获取客户端信息
     heart_pkgs = parse_heartpkgs()
     information = {}
     for ip in heart_pkgs:
         information = {
             "os": heart_pkgs[ip]['os'],
+            "mac": heart_pkgs[ip]['mac'],
             "working": heart_pkgs[ip]["working"],
             "netspeed": heart_pkgs[ip]['netspeed']
         }
     return information
 
-def get_realtime_data(filepath):
+def dispose_realtime(filepath):                                                                 # 处理实时数据
     """
-    实时更新数据，需要定期调用
-        从redis中获取数据
+    实时更新数据
     """
     return {
-        "client_reports": DB.loads(DB.hgetall("reports")),        # 客户端控制运行结果汇报
-        "client_waitdones": DB.loads(DB.hgetall("waitdones")),    # 客户端待办事项信息
-        "instructlist": DB.loads(DB.hgetall("instructlist")),     # 预存指令列表
-        "softwarelist": DB.loads(DB.hgetall("softwarelist")),
-        "classify": get_classify(),             # 分类数据
-        "classifylist": list(DB.smembers("classifylist")),    # 分类索引
-        "netspeed": get_netspeed(),
-        "client_information": get_client_information(),
-        "files": get_client_files(filepath)
+        "client_reports": parse_reports(),                                      # 客户端控制运行结果汇报
+        "instructlist": parse_instructs(),                                      # 预存指令列表
+        "softwarelist": parse_softwares(),                                      # 软件列表
+        "classify": dispose_classify_information(),                             # 分类数据
+        "classifylist": list(database.smembers("classifylist")),                # 分类索引
+        "client_information": dispose_client_information(),                     # 客户端信息
+        "files": dispose_client_files(filepath)                                 # 文件信息 
     }
 
 
 if __name__ == "__main__":
     Path.cwd().joinpath("local")
-    print(get_realtime_data(Path.cwd().joinpath("local")))
+    print(dispose_realtime(Path.cwd().joinpath("local")))

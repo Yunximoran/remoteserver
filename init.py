@@ -1,4 +1,5 @@
 import sys, json
+from pathlib import Path
 from lib import Resolver
 from lib.init.resolver import __resolver
 from lib.sys import NetWork
@@ -43,14 +44,19 @@ def set_database():
     if DATABASE["password"]:
         conf.setattrib("password", DATABASE["password"])
     else:
-        if "password" in conf.attrib:
-            conf.delattrib("password")   
+        try:
+            conf.password
+            conf.delattrib("password")
+        except AttributeError:
+            pass
         
     if DATABASE["user"]:
         conf.setattrib("user", DATABASE["user"])
     else:
-        if "user" in conf.attrib:
-            conf.delattrib("user")
+        try:
+            del conf['user']
+        except AttributeError:
+            pass
         
     if "usedb" in DATABASE:
         conf.search("db").setdata(DATABASE["usedb"])
@@ -97,6 +103,16 @@ def close():
 
     resolver.save()
     __resolver.save()
+
+
+def service():
+    cwd = Path.cwd()
+    with Resolver('service.xml') as resolver:
+        resolver("workingdirectory", is_node=True).setdata(cwd)
+        resolver("executable", is_node=True).setdata(cwd.joinpath(".conda", "python.exe"))
+        resolver("logpath", is_node=True).setdata(cwd.joinpath("runing.log"))
+        resolver("arguments", is_node=True).setdata(cwd.joinpath("start.py"))
+
 
 def init():
     set_server()

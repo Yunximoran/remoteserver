@@ -13,3 +13,6 @@ logs/*
 */.logs/
 *.log.*
 *.log
+build
+dist
+*.spec

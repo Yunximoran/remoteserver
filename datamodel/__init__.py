@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from .user import User, UserResponse, NewUser, Credentils
 from .transfer_data import *
+from .instruct import *
 from .classify import Classify
 
 

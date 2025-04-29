@@ -5,13 +5,14 @@ from fastapi import APIRouter
 from core.depend.control import Control
 from datamodel.instruct import Instruct
 from datamodel import WaitDesposeResults
-from static import DB
+from lib.database import Redis
 
 
 from . import _add_event as add
 from . import _pop_event as pop
 from . import _set_event as set
 
+database = Redis()
 controlor = Control()
 router = APIRouter()
 prefix="/server/event"
@@ -52,6 +53,6 @@ async def magic_client(toclients:List[AnyStr] = []):
 @router.put("/desposedsoftware")
 async def despose_waitdones(res: WaitDesposeResults):
     # 将待办实现处理结果保存redis
-    DB.hset("waitdone_despose_results", res.cookie, res.results)
+    database.hset("waitdone_despose_results", res.cookie, res.results)
     return {"OK": f"disposed: {res.cookie}"}
 

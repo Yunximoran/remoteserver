@@ -1,14 +1,14 @@
 import json
-from static import DB
+from lib.database import Redis
+
+database = Redis()
 
 def get_classify():
-    classify = DB.hgetall("classify")
+    classify = database.hgetall("classify")
     for cn in classify:
         context = classify[cn]
         print(json.loads(context))
         
-    
-def download(files, toclients):
-    pass
+
 if __name__ == "__main__":
     get_classify()

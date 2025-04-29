@@ -5,12 +5,13 @@ from fastapi import APIRouter, File, UploadFile
 
 from datamodel import SoftwareList
 from datamodel.instruct import InstructList, Instruct
-from core.depend.protocol.udp import BroadCastor
+from lib.sys.sock.udp import BroadCastor
 from core.depend.control import Control
 
-from static import DB
+from lib.database import Redis
 from lib import Resolver
 
+database = Redis()
 resolver = Resolver()
 
 # 广播发送端配置
@@ -71,8 +72,8 @@ async def send_software_checklist(checklist: SoftwareList):
 
 @router.post("/start_all_softwares")    # 开启所有软件
 async def start_all_softwares(cln:str=None):
-    context = DB.hgetall("classify")
-    classify = DB.loads(context)
+    context = database.hgetall("classify")
+    classify = database.loads(context)
     ip_soft: dict[str, list] = {}
     
     # 遍历所有分类
@@ -87,7 +88,7 @@ async def start_all_softwares(cln:str=None):
             if ip not in ip_soft:
                 ip_soft[ip] = []
                 
-            HeartPackages =DB.loads(DB.hget("heart_packages", ip))
+            HeartPackages =database.loads(database.hget("heart_packages", ip))
             ip_soft[ip].append(Instruct(label="start -s", instruct=soft, os=HeartPackages['os']).model_dump_json())
     # 遍历所有分类
     else:
@@ -100,7 +101,7 @@ async def start_all_softwares(cln:str=None):
                 if ip not in ip_soft:
                     ip_soft[ip] = []
                     
-                HeartPackages =DB.loads(DB.hget("heart_packages", ip))
+                HeartPackages =database.loads(database.hget("heart_packages", ip))
                 ip_soft[ip].append(Instruct(label="start -s", instruct=soft, os=HeartPackages['os']).model_dump_json())
                 
     for ip in ip_soft:
@@ -108,8 +109,8 @@ async def start_all_softwares(cln:str=None):
 
 @router.post("/close_all_softwares")    # 关闭所有软件
 async def close_all_softwares(cln:str=None):
-    context = DB.hgetall("classify")
-    classify = DB.loads(context)
+    context = database.hgetall("classify")
+    classify = database.loads(context)
     ip_soft: dict[str, list] = {}
     
     if cln is not None:
@@ -122,7 +123,7 @@ async def close_all_softwares(cln:str=None):
             if ip not in ip_soft:
                 ip_soft[ip] = []
                 
-            HeartPackages =DB.loads(DB.hget("heart_packages", ip))
+            HeartPackages =database.loads(database.hget("heart_packages", ip))
             ip_soft[ip].append(Instruct(label="close -s", instruct=soft, os=HeartPackages["os"]).model_dump_json())
     # 遍历所有分类
     else:
@@ -135,7 +136,7 @@ async def close_all_softwares(cln:str=None):
                 if ip not in ip_soft:
                     ip_soft[ip] = []
                     
-                HeartPackages =DB.loads(DB.hget("heart_packages", ip))
+                HeartPackages =database.loads(database.hget("heart_packages", ip))
                 ip_soft[ip].append(Instruct(label="close -s", instruct=soft, os=HeartPackages["os"]).model_dump_json())
     
     for ip in ip_soft:
